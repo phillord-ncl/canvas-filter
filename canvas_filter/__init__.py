@@ -36,7 +36,7 @@ def code_filter(elem, doc):
     else:
         print("no lang", file=open("log.txt", "a"))
         with open(include or path) as fh: content = fh.read()
-        highlighted = "<pre><code>\n" + content + "\n</code></pre>"
+        highlighted = "<pre><code>" + content + "\n</code></pre>"
 
     if not include:
         f.close()
