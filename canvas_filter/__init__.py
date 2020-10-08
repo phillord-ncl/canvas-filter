@@ -11,11 +11,13 @@ def tpf(f):
     return toml.load(f + ".tpf")
 
 def code_filter(elem, doc):
-    ##print(elem, file=open("log.txt", "a"))
+    print(elem, file=open("log.txt", "a"))
 
-    lang = elem.classes[0]
+    lang = len(elem.classes) > 0  and elem.classes[0]
     include=elem.attributes.get("include")
     output=elem.attributes.get("output")
+    stout=elem.attributes.get("stout")
+    crash=elem.attributes.get("crash")
 
     if not include:
         fd, path = tempfile.mkstemp(text=True)
@@ -23,14 +25,18 @@ def code_filter(elem, doc):
         f.write(elem.text)
         f.flush()
 
-    stream = os.popen(
-        "source-highlight -n " +
-        "--src-lang=" + lang +
-        " -o STDOUT -i " +
-        (include or path), "r"
-    )
-
-    highlighted = stream.read()
+    if lang:
+        stream = os.popen(
+            "source-highlight -n " +
+            "--src-lang=" + lang +
+            " -o STDOUT -i " +
+            (include or path), "r"
+        )
+        highlighted = stream.read()
+    else:
+        print("no lang", file=open("log.txt", "a"))
+        with open(include or path) as fh: content = fh.read()
+        highlighted = "<pre><code>\n" + content + "\n</code></pre>"
 
     if not include:
         f.close()
@@ -43,25 +49,44 @@ def code_filter(elem, doc):
         with open(name + ".out" ) as fh: output_text = fh.read()
         fh.close()
 
+    if stout:
+        print("stout", file=open("log.txt", "a"))
+        name = os.path.splitext(include)[0]
+        with open(name + ".stout" ) as fh: stout_text = fh.read()
+        fh.close()
+
+    if crash:
+        name = os.path.splitext(include)[0]
+        with open(name + ".crash" ) as fh: crash_text = fh.read()
+        fh.close()
+
 
     return [i for i in
             [
                 RawBlock(highlighted),
-                include and Para(Link(Str("Take from: " + include),
-                                      url=include_url)),
-                output and CodeBlock(output_text)
+                include and Para(Link
+                                 (Str("Take from: "
+                                      + os.path.basename(include)),
+                                  url=include_url)),
+                output and Para(Str("Outputs")),
+                output and CodeBlock(output_text),
+                stout and Para(Str("Prints")),
+                stout and CodeBlock(stout_text),
+                crash and Para(Str("Crashes")),
+                crash and CodeBlock(crash_text)
             ]
             if i
         ]
 
 def link_filter(elem, doc):
     base, ext = os.path.splitext(elem.url)
-    print("base, ext", base, ext, file=open("log.txt", "a"))
+    ##print("base, ext", base, ext, file=open("log.txt", "a"))
     if ext == ".mp4":
         tpf_data = tpf(elem.url)
+        print("tpf_dat", tpf_data, file=open("log.txt", "a"))
         return RawInline('''
 <iframe style="width: 400px; height: 225px; display: inline-block;"
-  title="Video player for 2020-09-22_11-01-33.mp4"
+  title="Video player"
   data-media-type="video"
   src="https://ncl.instructure.com/media_objects_iframe/{uuid}?type=video"
   allowfullscreen="allowfullscreen" allow="fullscreen"
@@ -72,7 +97,6 @@ def link_filter(elem, doc):
 
 
 def canvas_filter(elem, doc):
-    print(elem, doc, file=open("log.txt", "a"))
     if type(elem) == Link:
         return link_filter(elem, doc)
 
@@ -81,7 +105,6 @@ def canvas_filter(elem, doc):
 
 
 def main(doc=None):
-    print("main", file=open("log.txt", "a"))
     return run_filter(canvas_filter, doc=doc)
 
 if __name__ == '__main__':
