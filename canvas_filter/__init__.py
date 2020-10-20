@@ -80,7 +80,8 @@ def code_filter(elem, doc):
 
 def link_filter(elem, doc):
     ## Not a local URL so take it as it comes
-    if bool(urlparse(elem.url).netloc):
+    parsed = urlparse(elem.url)
+    if bool(parsed.netloc) or bool(parsed.scheme):
         return elem
 
 
