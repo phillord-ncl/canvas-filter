@@ -3,16 +3,18 @@ __version__ = '0.1.0'
 import os
 import tempfile
 import toml
+from urllib.parse import urlparse
 
 
 from panflute import *
+
+def tpp(f):
+    return toml.load(f + ".tpp")
 
 def tpf(f):
     return toml.load(f + ".tpf")
 
 def code_filter(elem, doc):
-    print(elem, file=open("log.txt", "a"))
-
     lang = len(elem.classes) > 0  and elem.classes[0]
     include=elem.attributes.get("include")
     output=elem.attributes.get("output")
@@ -34,7 +36,6 @@ def code_filter(elem, doc):
         )
         highlighted = stream.read()
     else:
-        print("no lang", file=open("log.txt", "a"))
         with open(include or path) as fh: content = fh.read()
         highlighted = "<pre><code>" + content + "\n</code></pre>"
 
@@ -50,7 +51,6 @@ def code_filter(elem, doc):
         fh.close()
 
     if stout:
-        print("stout", file=open("log.txt", "a"))
         name = os.path.splitext(include)[0]
         with open(name + ".stout" ) as fh: stout_text = fh.read()
         fh.close()
@@ -79,11 +79,16 @@ def code_filter(elem, doc):
         ]
 
 def link_filter(elem, doc):
+    ## Not a local URL so take it as it comes
+    if bool(urlparse(elem.url).netloc):
+        return elem
+
+
     base, ext = os.path.splitext(elem.url)
-    ##print("base, ext", base, ext, file=open("log.txt", "a"))
+
+    ## MP4 uses media player
     if ext == ".mp4":
         tpf_data = tpf(elem.url)
-        print("tpf_dat", tpf_data, file=open("log.txt", "a"))
         return RawInline('''
 <iframe style="width: 400px; height: 225px; display: inline-block;"
   title="Video player"
@@ -95,16 +100,36 @@ def link_filter(elem, doc):
 '''.format(uuid=tpf_data.get("media_entry_id")))
 
 
+    ## Just link to it!
+    include_url = "../files/{}/download".format(str(tpf(elem.url).get("id")))
+    elem.url = include_url
+    return elem
+
+def image_filter(elem, doc):
+    print("image", elem, file=open("log.txt", "a"))
+
+    tpf_data = tpf(elem.url)
+    print("tpf", tpf_data, file=open("log.txt", "a"))
+    return RawInline('''<img id="{id}"
+src="{canvas_uri}/courses/{course}/files/{id}/preview"
+alt="{name}" />
+'''.format(id=tpf_data.get("id"),name=elem.url,
+           canvas_uri=tpf_data.get("canvas_uri"),
+           course=tpf_data.get("course")))
+
 
 def canvas_filter(elem, doc):
+    if type(elem) == Image:
+        return image_filter(elem, doc)
+
     if type(elem) == Link:
         return link_filter(elem, doc)
 
     if type(elem) == CodeBlock:
         return code_filter(elem, doc)
 
-
 def main(doc=None):
+    print("start", file=open("log.txt", "w"))
     return run_filter(canvas_filter, doc=doc)
 
 if __name__ == '__main__':
