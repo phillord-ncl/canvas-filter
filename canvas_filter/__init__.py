@@ -68,11 +68,11 @@ def code_filter(elem, doc):
                                  (Str("Take from: "
                                       + os.path.basename(include)),
                                   url=include_url)),
-                output and Para(Str("Outputs")),
+                output and Para(Str("Outputs:")),
                 output and CodeBlock(output_text),
-                stout and Para(Str("Prints")),
+                stout and Para(Str("Prints:")),
                 stout and CodeBlock(stout_text),
-                crash and Para(Str("Crashes")),
+                crash and Para(Str("Crashes:")),
                 crash and CodeBlock(crash_text)
             ]
             if i
@@ -84,8 +84,12 @@ def link_filter(elem, doc):
     if bool(parsed.netloc) or bool(parsed.scheme):
         return elem
 
-
     base, ext = os.path.splitext(elem.url)
+
+    ## If there is no extension, assume this is a local link, so take
+    ## it as it comes.
+    if ext == "":
+        return elem
 
     ## MP4 uses media player
     if ext == ".mp4":
@@ -101,7 +105,7 @@ def link_filter(elem, doc):
 '''.format(uuid=tpf_data.get("media_entry_id")))
 
 
-    ## Just link to it!
+    ## Assume it is a file that has to be downloaded, so link to it via the TPF
     include_url = "../files/{}/download".format(str(tpf(elem.url).get("id")))
     elem.url = include_url
     return elem
