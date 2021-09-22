@@ -116,9 +116,9 @@ def image_filter(elem, doc):
     tpf_data = tpf(elem.url)
     print("tpf", tpf_data, file=open("log.txt", "a"))
     return RawInline('''<img id="{id}"
-src="{canvas_uri}/courses/{course}/files/{id}/preview"
+src="https://ncl.instructure.com/courses/{course}/files/{id}/preview"
 alt="{name}" />
-'''.format(id=tpf_data.get("id"),name=elem.url,
+'''.format(id=tpf_data.get("id"),name=elem.title,
            canvas_uri=tpf_data.get("canvas_uri"),
            course=tpf_data.get("course")))
 
