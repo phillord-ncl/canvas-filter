@@ -29,7 +29,7 @@ def code_filter(elem, doc):
 
     if lang:
         stream = os.popen(
-            "source-highlight -n " +
+            "source-highlight " +
             "--src-lang=" + lang +
             " -o STDOUT -i " +
             (include or path), "r"
